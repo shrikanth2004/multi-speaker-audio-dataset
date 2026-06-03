@@ -21,12 +21,18 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
 a {
@@ -101,6 +107,23 @@ a:hover {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
+  min-height: 44px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  align-items: stretch;
+  width: 100%;
+}
+
+.btn-row .btn {
+  flex: 1 1 auto;
+  min-width: min(140px, 100%);
 }
 
 .btn:active {
@@ -294,13 +317,83 @@ input:focus {
 }
 
 @media (max-width: 640px) {
+  .container {
+    width: min(1100px, 100%);
+    padding: 0 1rem;
+    box-sizing: border-box;
+  }
+
   .site-header {
     flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
+    gap: 0.75rem;
+    align-items: stretch;
+    margin-bottom: 1.25rem;
+  }
+
+  .logo {
+    font-size: 1.05rem;
   }
 
   .nav-links {
     flex-wrap: wrap;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .nav-links .btn {
+    width: 100%;
+  }
+
+  .hero {
+    padding: 2rem 0 1.5rem;
+  }
+
+  .hero .btn-primary {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .card {
+    padding: 1.15rem;
+  }
+
+  .btn-row {
+    flex-direction: column;
+  }
+
+  .btn-row .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .lobby-center {
+    margin: 1.5rem auto 2rem;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .modal-overlay {
+    padding: 0.75rem;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    align-items: flex-end;
+  }
+
+  .modal-overlay.open {
+    align-items: flex-end;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: 90dvh;
+    overflow-y: auto;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .toast-container {
+    left: 1rem;
+    right: 1rem;
+    transform: none;
+    bottom: max(1rem, env(safe-area-inset-bottom, 0px));
   }
 }

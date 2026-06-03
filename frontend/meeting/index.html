@@ -2,7 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <link rel="stylesheet" href="/css/meeting.css" />
     <title>Live Meeting Recorder</title>
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
@@ -43,7 +47,7 @@
         <button class="btn btn-secondary" id="btn-copy-link" style="margin-top: 0.75rem">
           Copy link
         </button>
-        <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; justify-content: center">
+        <div class="btn-row" style="margin-top: 1.5rem">
           <button class="btn btn-primary" id="btn-enter-host">Enter as host</button>
           <button class="btn btn-ghost" id="btn-back-create">Back</button>
         </div>
@@ -55,7 +59,7 @@
           <label for="join-code">Room ID or meeting link</label>
           <input type="text" id="join-code" placeholder="ABCD-EFGH or full URL" />
         </div>
-        <div style="display: flex; gap: 0.75rem; justify-content: center">
+        <div class="btn-row">
           <button class="btn btn-primary" id="btn-join-submit">Join</button>
           <button class="btn btn-ghost" id="btn-back-join">Back</button>
         </div>

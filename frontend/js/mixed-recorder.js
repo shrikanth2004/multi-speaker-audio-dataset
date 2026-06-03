@@ -45,8 +45,11 @@ class MixedAudioRecorder {
     }
   }
 
-  start() {
+  async start() {
     this._ensureContext();
+    if (this.audioContext.state === "suspended") {
+      await this.audioContext.resume();
+    }
     if (this.mediaRecorder?.state === "recording") return;
 
     const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")

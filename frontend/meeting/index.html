@@ -147,8 +147,15 @@
         show(panelJoin);
       }
       if (directRoomId && qs.get("auto") === "1") {
-        sessionStorage.setItem("meeting_role", "guest");
-        window.location.href = `/meeting/room.html?roomId=${directRoomId}`;
+        (async () => {
+          try {
+            const room = await API.getRoom(directRoomId);
+            sessionStorage.setItem("meeting_role", room.isHost ? "host" : "guest");
+            window.location.href = `/meeting/room.html?roomId=${room.roomId}`;
+          } catch (e) {
+            showToast(e.message || "Room not found");
+          }
+        })();
       }
     </script>
   </body>

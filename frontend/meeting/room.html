@@ -32,13 +32,20 @@
       </aside>
     </main>
 
-    <footer class="meeting-controls">
-      <button class="control-btn" id="btn-mute" title="Mute microphone">🎤</button>
+    <footer class="meeting-controls" id="meeting-controls">
+      <button class="control-btn" id="btn-mute" title="Mute microphone" disabled>
+        <svg class="control-icon" id="icon-mic-on" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-2.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+        <svg class="control-icon" id="icon-mic-off" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" hidden>
+          <path fill="currentColor" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3s-3 1.34-3 3v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
+        </svg>
+      </button>
       <button class="control-btn host-start" id="btn-start" hidden>Start meeting</button>
       <button class="control-btn host-start" id="btn-end" hidden style="background: var(--danger)">
         End meeting
       </button>
-      <button class="control-btn leave" id="btn-leave">Leave</button>
+      <button class="control-btn leave" id="btn-leave" disabled>Leave</button>
     </footer>
 
     <div class="modal-overlay" id="download-modal" hidden>
@@ -67,14 +74,13 @@
 
       const params = new URLSearchParams(location.search);
       const roomId = params.get("roomId");
-      const role = sessionStorage.getItem("meeting_role");
-      const isHost = role === "host";
       const user = Auth.getUser();
 
       if (!roomId) {
         window.location.href = "/meeting/index.html";
       }
 
+      let isHost = false;
       let meeting = null;
       let timerInterval = null;
       let meetingStartTime = null;
@@ -87,10 +93,13 @@
       const btnStart = document.getElementById("btn-start");
       const btnEnd = document.getElementById("btn-end");
       const btnMute = document.getElementById("btn-mute");
+      const btnLeave = document.getElementById("btn-leave");
+      const iconMicOn = document.getElementById("icon-mic-on");
+      const iconMicOff = document.getElementById("icon-mic-off");
+      const meetingControls = document.getElementById("meeting-controls");
 
-      if (isHost) {
-        btnStart.hidden = false;
-      }
+      const listRows = new Map();
+      const avatarTiles = new Map();
 
       function formatTimer(ms) {
         const s = Math.floor(ms / 1000);
@@ -115,44 +124,74 @@
           `${count} participant${count === 1 ? "" : "s"}`;
 
         const listEl = document.getElementById("participant-list");
-        listEl.innerHTML = list
-          .map(
-            (p) => `
-          <div class="participant-row">
-            <span class="status-dot"></span>
-            <div class="participant-info">
-              <div class="name">${escapeHtml(p.displayName)}${p.isHost ? " (Host)" : ""}</div>
-              <div class="role">${p.muted ? "Muted" : "Connected"}</div>
-            </div>
-          </div>`
-          )
-          .join("");
-
         const grid = document.getElementById("avatar-grid");
-        grid.innerHTML = list
-          .map((p) => {
-            const initial = (p.displayName || "?")[0].toUpperCase();
-            return `
-            <div class="avatar-tile">
-              <div class="avatar-circle ${p.muted ? "muted" : ""}">${initial}</div>
-              <div class="avatar-name">${escapeHtml(p.displayName)}</div>
-            </div>`;
-          })
-          .join("");
-      }
+        const seen = new Set();
 
-      function escapeHtml(s) {
-        const d = document.createElement("div");
-        d.textContent = s;
-        return d.innerHTML;
+        for (const p of list) {
+          seen.add(p.peerId);
+          const hostLabel = p.isHost ? " (Host)" : "";
+          const statusText = p.muted ? "Muted" : "Connected";
+          const initial = (p.displayName || "?")[0].toUpperCase();
+
+          let row = listRows.get(p.peerId);
+          if (!row) {
+            row = document.createElement("div");
+            row.className = "participant-row";
+            row.dataset.peerId = p.peerId;
+            row.innerHTML = `
+              <span class="status-dot"></span>
+              <div class="participant-info">
+                <div class="name"></div>
+                <div class="role"></div>
+              </div>`;
+            listEl.appendChild(row);
+            listRows.set(p.peerId, row);
+          }
+          row.querySelector(".name").textContent = `${p.displayName}${hostLabel}`;
+          row.querySelector(".role").textContent = statusText;
+
+          let tile = avatarTiles.get(p.peerId);
+          if (!tile) {
+            tile = document.createElement("div");
+            tile.className = "avatar-tile";
+            tile.dataset.peerId = p.peerId;
+            tile.innerHTML = `
+              <div class="avatar-circle"></div>
+              <div class="avatar-name"></div>`;
+            grid.appendChild(tile);
+            avatarTiles.set(p.peerId, tile);
+          }
+          const circle = tile.querySelector(".avatar-circle");
+          circle.textContent = initial;
+          circle.classList.toggle("muted", !!p.muted);
+          tile.querySelector(".avatar-name").textContent = p.displayName;
+        }
+
+        for (const [peerId, row] of listRows) {
+          if (!seen.has(peerId)) {
+            row.remove();
+            listRows.delete(peerId);
+          }
+        }
+        for (const [peerId, tile] of avatarTiles) {
+          if (!seen.has(peerId)) {
+            tile.remove();
+            avatarTiles.delete(peerId);
+          }
+        }
       }
 
       async function initMeeting() {
         try {
           const room = await API.getRoom(roomId);
           roomCode = room.roomCode;
+          isHost = room.isHost;
           document.getElementById("room-label").textContent =
             `Room ${room.roomCode} · ${room.hostName}`;
+
+          if (isHost) {
+            btnStart.hidden = false;
+          }
 
           meeting = new WebRTCMeeting({
             roomId,
@@ -172,6 +211,9 @@
           });
 
           await meeting.init();
+          meetingControls.classList.add("ready");
+          btnMute.disabled = false;
+          btnLeave.disabled = false;
         } catch (e) {
           showToast(e.message || "Could not join meeting");
           setTimeout(() => (window.location.href = "/meeting/index.html"), 2000);
@@ -179,21 +221,23 @@
       }
 
       btnMute.addEventListener("click", () => {
+        if (!meeting) return;
         const muted = meeting.toggleMute();
         btnMute.classList.toggle("muted", muted);
-        btnMute.textContent = muted ? "🔇" : "🎤";
+        iconMicOn.hidden = muted;
+        iconMicOff.hidden = !muted;
       });
 
       btnStart.addEventListener("click", async () => {
         try {
+          await meeting.startMeetingRecording();
           const res = await API.startMeeting(roomId);
           meetingStartedAt = res.startedAt;
-          await meeting.startMeetingRecording();
           recBadge.classList.add("active");
           startTimer();
           btnStart.hidden = true;
           btnEnd.hidden = false;
-          showToast("Meeting started — recording");
+          showToast("Meeting started — recording all participants");
         } catch (e) {
           showToast(e.message);
         }
@@ -239,7 +283,8 @@
       });
 
       document.getElementById("btn-leave").addEventListener("click", () => {
-        meeting?.destroy();
+        if (!meeting) return;
+        meeting.destroy();
         window.location.href = "/meeting/index.html";
       });
 

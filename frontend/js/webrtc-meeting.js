@@ -18,6 +18,7 @@ class WebRTCMeeting {
     this.muted = false;
     this.meetingLive = false;
     this.remoteAudios = new Map();
+    this.remoteStreams = new Map();
   }
 
   async init() {
@@ -146,8 +147,13 @@ class WebRTCMeeting {
       const stream = ev.streams[0] || new MediaStream([ev.track]);
       this._attachRemoteAudio(remotePeerId, stream);
       if (this.isHost && this.meetingLive) {
-        this.mixedRecorder.addStream(remotePeerId, stream);
+        this._addRemoteToRecorder(remotePeerId, stream);
       }
+      ev.track.onunmute = () => {
+        if (this.isHost && this.meetingLive) {
+          this._addRemoteToRecorder(remotePeerId, stream);
+        }
+      };
     };
 
     pc.onicecandidate = (ev) => {
@@ -171,6 +177,7 @@ class WebRTCMeeting {
   }
 
   _attachRemoteAudio(peerId, stream) {
+    this.remoteStreams.set(peerId, stream);
     let audio = this.remoteAudios.get(peerId);
     if (!audio) {
       audio = document.createElement("audio");
@@ -181,6 +188,17 @@ class WebRTCMeeting {
       this.remoteAudios.set(peerId, audio);
     }
     audio.srcObject = stream;
+  }
+
+  _addRemoteToRecorder(peerId, stream) {
+    if (!stream?.getAudioTracks().length) return;
+    this.mixedRecorder.addStream(peerId, stream);
+  }
+
+  _backfillRemoteStreamsToRecorder() {
+    for (const [peerId, stream] of this.remoteStreams) {
+      this._addRemoteToRecorder(peerId, stream);
+    }
   }
 
   async _createOffer(remotePeerId) {
@@ -228,6 +246,7 @@ class WebRTCMeeting {
       this.peers.delete(peerId);
     }
     this.mixedRecorder.removeStream(peerId);
+    this.remoteStreams.delete(peerId);
     const audio = this.remoteAudios.get(peerId);
     if (audio) {
       audio.remove();
@@ -247,7 +266,8 @@ class WebRTCMeeting {
   async startMeetingRecording() {
     this.meetingLive = true;
     this.mixedRecorder.addStream("local", this.localStream);
-    this.mixedRecorder.start();
+    this._backfillRemoteStreamsToRecorder();
+    await this.mixedRecorder.start();
     this._send({
       type: "meeting-started",
       startedAt: new Date().toISOString(),
@@ -272,6 +292,7 @@ class WebRTCMeeting {
     this.mixedRecorder.destroy();
     this.remoteAudios.forEach((a) => a.remove());
     this.remoteAudios.clear();
+    this.remoteStreams.clear();
     if (this.ws) this.ws.close();
   }
 }

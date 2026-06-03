@@ -205,47 +205,44 @@
   z-index: 100;
   width: 100%;
   max-width: 100vw;
-  padding: 0.75rem 0.75rem;
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
   background: var(--surface);
   border-top: 1px solid var(--border);
   box-sizing: border-box;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
 }
 
+.controls-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .control-btn[hidden] {
   display: none !important;
 }
 
-.controls-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  max-width: 100%;
+.control-mute {
+  flex: 0 0 auto;
 }
 
-.controls-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  flex: 1 1 auto;
-  min-width: 0;
+.control-leave {
+  flex: 0 0 auto;
 }
 
-.btn-label-short {
-  display: none;
+.control-host {
+  flex: 0 0 auto;
 }
 
-.btn-label-full {
-  display: inline;
+.control-start {
+  background: var(--accent);
 }
 
-.control-btn.btn-end {
+.control-end {
   background: var(--danger);
 }
 
@@ -286,24 +283,26 @@
   background: var(--danger);
 }
 
-.control-btn.leave {
+.control-leave {
   background: var(--danger);
   width: auto;
-  padding: 0 1.5rem;
+  padding: 0 1.25rem;
   border-radius: 999px;
   font-size: 0.9rem;
   font-weight: 500;
+  height: 52px;
 }
 
-.control-btn.host-start {
+.control-host {
   width: auto;
   min-width: 0;
   padding: 0 1.25rem;
   border-radius: 999px;
-  background: var(--accent);
   font-size: 0.85rem;
+  font-weight: 500;
   max-width: 100%;
   white-space: nowrap;
+  height: 52px;
 }
 
 .share-box {
@@ -365,10 +364,14 @@
   gap: 0.5rem;
 }
 
-/* Mobile / tablet: pin controls to bottom so they are never clipped */
+/* Mobile: pin controls above browser chrome (fixes bottom clipping) */
 @media (max-width: 768px) {
   .meeting-page {
-    --meeting-controls-height: 10.5rem;
+    --meeting-controls-height: 8.5rem;
+    height: 100svh;
+    height: 100dvh;
+    max-height: 100svh;
+    max-height: 100dvh;
     overflow: hidden;
   }
 
@@ -379,6 +382,42 @@
     bottom: 0;
     z-index: 500;
     margin: 0;
+    padding: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    grid-template-rows: auto auto;
+    gap: 0.5rem;
+    padding: 0.6rem 0.65rem;
+    padding-bottom: max(0.6rem, env(safe-area-inset-bottom, 12px));
+  }
+
+  .control-mute {
+    grid-column: 1;
+    grid-row: 1;
+    width: 52px;
+    height: 52px;
+  }
+
+  .control-leave {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    height: 52px;
+    border-radius: 10px;
+  }
+
+  .control-start,
+  .control-end {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    height: 48px;
+    border-radius: 10px;
+    font-size: 0.9rem;
   }
 
   .meeting-main {
@@ -392,54 +431,54 @@
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     padding-bottom: calc(
-      var(--meeting-controls-height) + env(safe-area-inset-bottom, 0px)
+      var(--meeting-controls-height) + env(safe-area-inset-bottom, 16px) + 8px
     );
   }
 
   .meeting-stage {
     flex: 1 1 auto;
     min-height: 0;
-    padding: 1rem 0.75rem 0.5rem;
+    padding: 0.75rem 0.65rem 0.5rem;
     justify-content: flex-start;
     overflow-y: auto;
   }
 
   .participant-count-large {
-    font-size: 2.25rem;
+    font-size: 2rem;
   }
 
   .participant-avatars {
-    margin-top: 0.75rem;
-    gap: 0.65rem;
+    margin-top: 0.5rem;
+    gap: 0.5rem;
   }
 
   .avatar-tile {
-    width: 88px;
+    width: 80px;
   }
 
   .avatar-circle {
-    width: 56px;
-    height: 56px;
-    font-size: 1.2rem;
+    width: 52px;
+    height: 52px;
+    font-size: 1.1rem;
   }
 
   .sidebar-panel {
     flex: 0 0 auto;
     border-left: none;
     border-top: 1px solid var(--border);
-    max-height: 28vh;
+    max-height: 22vh;
     min-height: 0;
   }
 
   .participant-list {
-    max-height: 22vh;
+    max-height: 18vh;
   }
 
   .meeting-topbar {
     flex: 0 0 auto;
     flex-wrap: wrap;
     gap: 0.35rem 0.75rem;
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 0.65rem;
     padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
   }
 
@@ -458,42 +497,6 @@
     font-size: 0.75rem;
   }
 
-  .controls-bar {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-  }
-
-  #btn-mute {
-    flex: 0 0 52px;
-  }
-
-  .controls-actions {
-    flex: 1 1 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-    min-width: 0;
-  }
-
-  .control-btn.host-start,
-  .control-btn.leave {
-    width: 100%;
-    min-height: 46px;
-    height: auto;
-    padding: 0.6rem 0.75rem;
-    font-size: 0.85rem;
-    border-radius: 10px;
-    white-space: nowrap;
-  }
-
-  .control-btn.leave {
-    border-radius: 10px;
-  }
-
   .meeting-meta #participant-count {
     display: none;
   }
@@ -501,35 +504,28 @@
 
 @media (max-width: 480px) {
   .meeting-page {
-    --meeting-controls-height: 11.5rem;
+    --meeting-controls-height: 9rem;
   }
 
-  .btn-label-full {
-    display: none;
-  }
-
-  .btn-label-short {
-    display: inline;
+  .control-start,
+  .control-end {
+    height: 46px;
+    font-size: 0.85rem;
   }
 }
 
 @media (max-width: 360px) {
-  .meeting-page {
-    --meeting-controls-height: 12rem;
+  .controls-grid {
+    grid-template-columns: 48px 1fr;
   }
 
-  .control-btn {
+  .control-mute {
     width: 48px;
     height: 48px;
   }
 
-  #btn-mute {
-    flex: 0 0 48px;
-  }
-
-  .control-btn.host-start,
-  .control-btn.leave {
-    min-height: 44px;
-    font-size: 0.8rem;
+  .control-leave {
+    height: 48px;
+    font-size: 0.85rem;
   }
 }

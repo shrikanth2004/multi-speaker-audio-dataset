@@ -8,7 +8,7 @@
     />
     <title>Meeting Room</title>
     <link rel="stylesheet" href="/css/styles.css" />
-    <link rel="stylesheet" href="/css/meeting.css" />
+    <link rel="stylesheet" href="/css/meeting.css?v=3" />
   </head>
   <body class="meeting-page">
     <header class="meeting-topbar">
@@ -36,26 +36,30 @@
     </main>
 
     <footer class="meeting-controls" id="meeting-controls">
-      <div class="controls-bar">
-        <button class="control-btn" id="btn-mute" title="Mute microphone" disabled>
-          <svg class="control-icon" id="icon-mic-on" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+      <div class="controls-grid">
+        <button
+          type="button"
+          class="control-btn control-mute"
+          id="btn-mute"
+          title="Mute microphone"
+          disabled
+        >
+          <svg class="control-icon" id="icon-mic-on" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
             <path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-2.08c3.39-.49 6-3.39 6-6.92h-2z"/>
           </svg>
-          <svg class="control-icon" id="icon-mic-off" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" hidden>
+          <svg class="control-icon" id="icon-mic-off" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" hidden>
             <path fill="currentColor" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3s-3 1.34-3 3v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
           </svg>
         </button>
-        <div class="controls-actions">
-          <button class="control-btn host-start" id="btn-start" hidden>
-            <span class="btn-label-full">Start meeting</span>
-            <span class="btn-label-short">Start</span>
-          </button>
-          <button class="control-btn host-start btn-end" id="btn-end" hidden>
-            <span class="btn-label-full">End meeting</span>
-            <span class="btn-label-short">End</span>
-          </button>
-          <button class="control-btn leave" id="btn-leave" disabled>Leave</button>
-        </div>
+        <button type="button" class="control-btn control-leave" id="btn-leave" disabled>
+          Leave
+        </button>
+        <button type="button" class="control-btn control-host control-start" id="btn-start" hidden>
+          Start meeting
+        </button>
+        <button type="button" class="control-btn control-host control-end" id="btn-end" hidden>
+          End meeting
+        </button>
       </div>
     </footer>
 
@@ -109,22 +113,37 @@
       const iconMicOff = document.getElementById("icon-mic-off");
       const meetingControls = document.getElementById("meeting-controls");
 
-      function syncControlsInset() {
+      function syncControlsLayout() {
         if (!meetingControls) return;
-        const h = Math.ceil(meetingControls.getBoundingClientRect().height);
-        document.documentElement.style.setProperty(
-          "--meeting-controls-height",
-          `${h}px`
-        );
+        const isMobile = window.matchMedia("(max-width: 768px)").matches;
+        const h = Math.ceil(meetingControls.offsetHeight);
+        document.documentElement.style.setProperty("--meeting-controls-height", `${h}px`);
+
+        if (!isMobile) {
+          meetingControls.style.bottom = "";
+          return;
+        }
+
+        if (window.visualViewport) {
+          const vv = window.visualViewport;
+          const gap = Math.max(0, window.innerHeight - (vv.offsetTop + vv.height));
+          meetingControls.style.bottom = `${Math.ceil(gap)}px`;
+        } else {
+          meetingControls.style.bottom = "0px";
+        }
       }
 
       if (window.ResizeObserver && meetingControls) {
-        new ResizeObserver(syncControlsInset).observe(meetingControls);
+        new ResizeObserver(syncControlsLayout).observe(meetingControls);
       }
-      window.addEventListener("resize", syncControlsInset);
+      window.addEventListener("resize", syncControlsLayout);
       window.addEventListener("orientationchange", () => {
-        setTimeout(syncControlsInset, 100);
+        setTimeout(syncControlsLayout, 150);
       });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", syncControlsLayout);
+        window.visualViewport.addEventListener("scroll", syncControlsLayout);
+      }
 
       const listRows = new Map();
       const avatarTiles = new Map();
@@ -220,7 +239,7 @@
           if (isHost) {
             btnStart.hidden = false;
           }
-          requestAnimationFrame(syncControlsInset);
+          requestAnimationFrame(syncControlsLayout);
 
           meeting = new WebRTCMeeting({
             roomId,
@@ -266,7 +285,7 @@
           startTimer();
           btnStart.hidden = true;
           btnEnd.hidden = false;
-          requestAnimationFrame(syncControlsInset);
+          requestAnimationFrame(syncControlsLayout);
           showToast("Meeting started — recording all participants");
         } catch (e) {
           showToast(e.message);
@@ -319,7 +338,7 @@
       });
 
       initMeeting();
-      requestAnimationFrame(syncControlsInset);
+      requestAnimationFrame(syncControlsLayout);
     </script>
   </body>
 </html>

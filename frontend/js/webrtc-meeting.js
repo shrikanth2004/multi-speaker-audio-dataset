@@ -146,11 +146,11 @@ class WebRTCMeeting {
     pc.ontrack = (ev) => {
       const stream = ev.streams[0] || new MediaStream([ev.track]);
       this._attachRemoteAudio(remotePeerId, stream);
-      if (this.isHost && this.meetingLive) {
+      if (this.meetingLive) {
         this._addRemoteToRecorder(remotePeerId, stream);
       }
       ev.track.onunmute = () => {
-        if (this.isHost && this.meetingLive) {
+        if (this.meetingLive) {
           this._addRemoteToRecorder(remotePeerId, stream);
         }
       };
@@ -184,10 +184,13 @@ class WebRTCMeeting {
       audio.autoplay = true;
       audio.playsInline = true;
       audio.style.display = "none";
+      audio.muted = false;
       document.body.appendChild(audio);
       this.remoteAudios.set(peerId, audio);
     }
     audio.srcObject = stream;
+    // Explicitly start playback to bypass autoplay restrictions
+    audio.play().catch(() => {});
   }
 
   _addRemoteToRecorder(peerId, stream) {

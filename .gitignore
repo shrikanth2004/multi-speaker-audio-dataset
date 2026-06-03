@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs & local data
+*.log
+logs/
+data/
+*.webm
+*.wav
+*.mp3
+*.mp4
+*.zip
+*.tar
+*.tar.gz
+
+# Vercel
+.vercel/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Node (if added later)
+node_modules/
+
+# OS / OneDrive conflict files
+~$*
+*.tmp

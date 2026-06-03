@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Meeting Recorder</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="site-header">
+        <a href="/index.html" class="logo">
+          <span class="logo-icon">🎙</span>
+          Live Meeting Recorder
+        </a>
+        <nav class="nav-links">
+          <a href="/index.html">Home</a>
+          <a href="/meeting/index.html" class="active">Meetings</a>
+        </nav>
+      </header>
+
+      <div class="lobby-center card" id="lobby-options">
+        <h1 style="margin-top: 0">Meeting Room</h1>
+        <p style="color: var(--text-muted)">
+          Start a new room or join with a code or link.
+        </p>
+        <div class="option-cards">
+          <div class="option-card" id="opt-create">
+            <h3>Create Meeting Room</h3>
+            <p>Get a room ID and shareable link. You control start and end.</p>
+          </div>
+          <div class="option-card" id="opt-join">
+            <h3>Join Meeting Room</h3>
+            <p>Enter a room code or paste a meeting link.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="lobby-center card" id="panel-create" hidden>
+        <h2 style="margin-top: 0">Your meeting room</h2>
+        <p>Room code: <strong id="room-code"></strong></p>
+        <div class="share-box" id="meeting-link"></div>
+        <button class="btn btn-secondary" id="btn-copy-link" style="margin-top: 0.75rem">
+          Copy link
+        </button>
+        <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; justify-content: center">
+          <button class="btn btn-primary" id="btn-enter-host">Enter as host</button>
+          <button class="btn btn-ghost" id="btn-back-create">Back</button>
+        </div>
+      </div>
+
+      <div class="lobby-center card" id="panel-join" hidden>
+        <h2 style="margin-top: 0">Join a room</h2>
+        <div class="form-group">
+          <label for="join-code">Room ID or meeting link</label>
+          <input type="text" id="join-code" placeholder="ABCD-EFGH or full URL" />
+        </div>
+        <div style="display: flex; gap: 0.75rem; justify-content: center">
+          <button class="btn btn-primary" id="btn-join-submit">Join</button>
+          <button class="btn btn-ghost" id="btn-back-join">Back</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/env-config.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script>
+      if (!Auth.requireAuth()) throw new Error("auth");
+
+      const lobby = document.getElementById("lobby-options");
+      const panelCreate = document.getElementById("panel-create");
+      const panelJoin = document.getElementById("panel-join");
+      let createdRoom = null;
+
+      function show(panel) {
+        lobby.hidden = true;
+        panelCreate.hidden = true;
+        panelJoin.hidden = true;
+        panel.hidden = false;
+      }
+
+      document.getElementById("opt-create").addEventListener("click", async () => {
+        try {
+          createdRoom = await API.createRoom();
+          document.getElementById("room-code").textContent = createdRoom.roomCode;
+          document.getElementById("meeting-link").textContent = createdRoom.meetingLink;
+          show(panelCreate);
+        } catch (e) {
+          showToast(e.message);
+        }
+      });
+
+      document.getElementById("opt-join").addEventListener("click", () => show(panelJoin));
+
+      document.getElementById("btn-back-create").addEventListener("click", () => {
+        panelCreate.hidden = true;
+        lobby.hidden = false;
+      });
+
+      document.getElementById("btn-back-join").addEventListener("click", () => {
+        panelJoin.hidden = true;
+        lobby.hidden = false;
+      });
+
+      document.getElementById("btn-copy-link").addEventListener("click", () => {
+        const link = document.getElementById("meeting-link").textContent;
+        navigator.clipboard.writeText(link);
+        showToast("Link copied");
+      });
+
+      document.getElementById("btn-enter-host").addEventListener("click", () => {
+        if (!createdRoom) return;
+        sessionStorage.setItem("meeting_role", "host");
+        window.location.href = `/meeting/room.html?roomId=${createdRoom.roomId}`;
+      });
+
+      function parseRoomId(input) {
+        const trimmed = input.trim();
+        try {
+          const url = new URL(trimmed);
+          return url.searchParams.get("roomId") || url.searchParams.get("code") || trimmed;
+        } catch {
+          return trimmed;
+        }
+      }
+
+      document.getElementById("btn-join-submit").addEventListener("click", async () => {
+        const raw = document.getElementById("join-code").value;
+        if (!raw) return showToast("Enter a room code or link");
+        const id = parseRoomId(raw);
+        try {
+          const room = await API.getRoom(id);
+          sessionStorage.setItem("meeting_role", room.isHost ? "host" : "guest");
+          window.location.href = `/meeting/room.html?roomId=${room.roomId}`;
+        } catch (e) {
+          showToast(e.message || "Room not found");
+        }
+      });
+
+      const qs = new URLSearchParams(location.search);
+      const prefillCode = qs.get("code");
+      const directRoomId = qs.get("roomId");
+      if (prefillCode) {
+        document.getElementById("join-code").value = prefillCode;
+        show(panelJoin);
+      }
+      if (directRoomId && qs.get("auto") === "1") {
+        sessionStorage.setItem("meeting_role", "guest");
+        window.location.href = `/meeting/room.html?roomId=${directRoomId}`;
+      }
+    </script>
+  </body>
+</html>

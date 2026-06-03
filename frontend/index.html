@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi-Audio Dataset Platform</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="site-header">
+        <a href="/index.html" class="logo">
+          <span class="logo-icon">🎙</span>
+          Multi-Audio Platform
+        </a>
+        <nav class="nav-links">
+          <a href="/index.html" class="active">Home</a>
+          <a href="/meeting/index.html">Live Meeting Recorder</a>
+          <span class="user-badge" id="user-badge"></span>
+          <button class="btn btn-ghost" id="btn-logout" hidden>Sign out</button>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <h1>Multilingual Audio Dataset Platform</h1>
+        <p>
+          Collect, manage, and collaborate on audio data — including real-time
+          voice meetings with a combined recording you download locally.
+        </p>
+        <a href="/meeting/index.html" class="btn btn-primary" id="cta-meeting">
+          Open Live Meeting Recorder
+        </a>
+      </section>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>🎧 Live Meeting Recorder</h3>
+          <p>
+            Google Meet–style voice rooms with WebRTC. Hosts download one merged
+            audio file — nothing is stored on the server.
+          </p>
+        </div>
+        <div class="feature-card">
+          <h3>🔒 Secure access</h3>
+          <p>Authenticated users only. Room codes and shareable links for guests you invite.</p>
+        </div>
+        <div class="feature-card">
+          <h3>⬇️ Local download only</h3>
+          <p>When the host ends a meeting, download the recording to your computer. No server storage.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="login-modal">
+      <div class="modal card">
+        <h2 style="margin-top: 0">Sign in to continue</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem">
+          Enter your email and display name to use meetings on this device.
+        </p>
+        <form id="login-form">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" required placeholder="you@example.com" />
+          </div>
+          <div class="form-group">
+            <label for="display-name">Display name</label>
+            <input type="text" id="display-name" required placeholder="Your name" />
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%">
+            Continue
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <script src="/js/env-config.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+      const user = Auth.getUser();
+      const badge = document.getElementById("user-badge");
+      const logoutBtn = document.getElementById("btn-logout");
+      const modal = document.getElementById("login-modal");
+
+      if (user) {
+        badge.textContent = `Signed in as ${user.name}`;
+        logoutBtn.hidden = false;
+      }
+
+      logoutBtn.addEventListener("click", () => Auth.logout());
+
+      const params = new URLSearchParams(location.search);
+      if (params.get("login") === "1" || !Auth.isLoggedIn()) {
+        if (!Auth.isLoggedIn()) modal.classList.add("open");
+      }
+
+      document.getElementById("login-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("email").value.trim();
+        const name = document.getElementById("display-name").value.trim();
+        try {
+          await Auth.demoLogin(email, name);
+          modal.classList.remove("open");
+          badge.textContent = `Signed in as ${name}`;
+          logoutBtn.hidden = false;
+          showToast("Welcome!");
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+
+      document.getElementById("cta-meeting").addEventListener("click", (e) => {
+        if (!Auth.isLoggedIn()) {
+          e.preventDefault();
+          modal.classList.add("open");
+        }
+      });
+    </script>
+  </body>
+</html>

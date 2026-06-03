@@ -1,0 +1,18 @@
+# Optional: deploy the FastAPI backend on Render (free tier).
+# After deploy, copy your Render URL into vercel.json rewrites (replace YOUR-BACKEND-URL).
+
+services:
+  - type: web
+    name: multu-audio-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: MEETING_BASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

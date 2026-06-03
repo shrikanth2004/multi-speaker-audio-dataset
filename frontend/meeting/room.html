@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meeting Room</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="stylesheet" href="/css/meeting.css" />
+  </head>
+  <body class="meeting-page">
+    <header class="meeting-topbar">
+      <div class="meeting-title" id="room-label">Meeting Room</div>
+      <div class="meeting-meta">
+        <span id="timer">00:00:00</span>
+        <span id="participant-count">0 participants</span>
+        <div class="rec-badge" id="rec-badge">
+          <span class="rec-dot"></span> REC
+        </div>
+      </div>
+    </header>
+
+    <main class="meeting-main">
+      <section class="meeting-stage">
+        <div class="participant-count-large" id="count-display">0</div>
+        <p style="color: var(--text-muted); margin: 0">in this call</p>
+        <div class="participant-avatars" id="avatar-grid"></div>
+      </section>
+
+      <aside class="sidebar-panel">
+        <div class="panel-header">Participants</div>
+        <div class="participant-list" id="participant-list"></div>
+      </aside>
+    </main>
+
+    <footer class="meeting-controls">
+      <button class="control-btn" id="btn-mute" title="Mute microphone">🎤</button>
+      <button class="control-btn host-start" id="btn-start" hidden>Start meeting</button>
+      <button class="control-btn host-start" id="btn-end" hidden style="background: var(--danger)">
+        End meeting
+      </button>
+      <button class="control-btn leave" id="btn-leave">Leave</button>
+    </footer>
+
+    <div class="modal-overlay" id="download-modal" hidden>
+      <div class="modal card" style="text-align: center; max-width: 420px">
+        <h2 style="margin-top: 0">Recording ready</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem">
+          The meeting audio stays on your device only. Nothing is uploaded or saved on the server.
+        </p>
+        <audio id="preview-audio" controls style="width: 100%; margin: 1rem 0"></audio>
+        <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap">
+          <button class="btn btn-primary" id="btn-download-recording">Download recording</button>
+          <button class="btn btn-ghost" id="btn-close-download">Back to lobby</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/env-config.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/download.js"></script>
+    <script src="/js/mixed-recorder.js"></script>
+    <script src="/js/webrtc-meeting.js"></script>
+    <script>
+      if (!Auth.requireAuth()) throw new Error("auth");
+
+      const params = new URLSearchParams(location.search);
+      const roomId = params.get("roomId");
+      const role = sessionStorage.getItem("meeting_role");
+      const isHost = role === "host";
+      const user = Auth.getUser();
+
+      if (!roomId) {
+        window.location.href = "/meeting/index.html";
+      }
+
+      let meeting = null;
+      let timerInterval = null;
+      let meetingStartTime = null;
+      let meetingStartedAt = null;
+      let roomCode = "";
+      let pendingRecordingBlob = null;
+      let pendingRecordingName = "";
+
+      const recBadge = document.getElementById("rec-badge");
+      const btnStart = document.getElementById("btn-start");
+      const btnEnd = document.getElementById("btn-end");
+      const btnMute = document.getElementById("btn-mute");
+
+      if (isHost) {
+        btnStart.hidden = false;
+      }
+
+      function formatTimer(ms) {
+        const s = Math.floor(ms / 1000);
+        const h = String(Math.floor(s / 3600)).padStart(2, "0");
+        const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+        const sec = String(s % 60).padStart(2, "0");
+        return `${h}:${m}:${sec}`;
+      }
+
+      function startTimer() {
+        meetingStartTime = Date.now();
+        timerInterval = setInterval(() => {
+          document.getElementById("timer").textContent = formatTimer(
+            Date.now() - meetingStartTime
+          );
+        }, 1000);
+      }
+
+      function renderParticipants(list, count) {
+        document.getElementById("count-display").textContent = count;
+        document.getElementById("participant-count").textContent =
+          `${count} participant${count === 1 ? "" : "s"}`;
+
+        const listEl = document.getElementById("participant-list");
+        listEl.innerHTML = list
+          .map(
+            (p) => `
+          <div class="participant-row">
+            <span class="status-dot"></span>
+            <div class="participant-info">
+              <div class="name">${escapeHtml(p.displayName)}${p.isHost ? " (Host)" : ""}</div>
+              <div class="role">${p.muted ? "Muted" : "Connected"}</div>
+            </div>
+          </div>`
+          )
+          .join("");
+
+        const grid = document.getElementById("avatar-grid");
+        grid.innerHTML = list
+          .map((p) => {
+            const initial = (p.displayName || "?")[0].toUpperCase();
+            return `
+            <div class="avatar-tile">
+              <div class="avatar-circle ${p.muted ? "muted" : ""}">${initial}</div>
+              <div class="avatar-name">${escapeHtml(p.displayName)}</div>
+            </div>`;
+          })
+          .join("");
+      }
+
+      function escapeHtml(s) {
+        const d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+      }
+
+      async function initMeeting() {
+        try {
+          const room = await API.getRoom(roomId);
+          roomCode = room.roomCode;
+          document.getElementById("room-label").textContent =
+            `Room ${room.roomCode} · ${room.hostName}`;
+
+          meeting = new WebRTCMeeting({
+            roomId,
+            isHost,
+            displayName: user.name,
+            userId: user.id,
+            onParticipantUpdate: renderParticipants,
+            onNotification: showToast,
+            onMeetingStarted: () => {
+              recBadge.classList.add("active");
+              if (!timerInterval) startTimer();
+            },
+            onMeetingEnded: () => {
+              recBadge.classList.remove("active");
+              showToast("Meeting ended by host");
+            },
+          });
+
+          await meeting.init();
+        } catch (e) {
+          showToast(e.message || "Could not join meeting");
+          setTimeout(() => (window.location.href = "/meeting/index.html"), 2000);
+        }
+      }
+
+      btnMute.addEventListener("click", () => {
+        const muted = meeting.toggleMute();
+        btnMute.classList.toggle("muted", muted);
+        btnMute.textContent = muted ? "🔇" : "🎤";
+      });
+
+      btnStart.addEventListener("click", async () => {
+        try {
+          const res = await API.startMeeting(roomId);
+          meetingStartedAt = res.startedAt;
+          await meeting.startMeetingRecording();
+          recBadge.classList.add("active");
+          startTimer();
+          btnStart.hidden = true;
+          btnEnd.hidden = false;
+          showToast("Meeting started — recording");
+        } catch (e) {
+          showToast(e.message);
+        }
+      });
+
+      function showDownloadModal(blob) {
+        pendingRecordingBlob = blob;
+        pendingRecordingName = meetingRecordingFilename(roomCode, roomId);
+        const modal = document.getElementById("download-modal");
+        const preview = document.getElementById("preview-audio");
+        preview.src = URL.createObjectURL(blob);
+        modal.hidden = false;
+        modal.classList.add("open");
+        downloadBlob(blob, pendingRecordingName);
+        showToast("Download started — file is not stored on the server");
+      }
+
+      document.getElementById("btn-download-recording").addEventListener("click", () => {
+        if (pendingRecordingBlob) {
+          downloadBlob(pendingRecordingBlob, pendingRecordingName);
+        }
+      });
+
+      document.getElementById("btn-close-download").addEventListener("click", () => {
+        meeting?.destroy();
+        window.location.href = "/meeting/index.html";
+      });
+
+      btnEnd.addEventListener("click", async () => {
+        if (!confirm("End meeting for everyone? You can download the recording to your device."))
+          return;
+        try {
+          const { blob } = await meeting.stopMeetingRecording();
+          await API.endMeeting(roomId);
+          recBadge.classList.remove("active");
+          if (timerInterval) clearInterval(timerInterval);
+          showDownloadModal(blob);
+          meeting.destroy();
+          meeting = null;
+        } catch (e) {
+          showToast(e.message);
+        }
+      });
+
+      document.getElementById("btn-leave").addEventListener("click", () => {
+        meeting?.destroy();
+        window.location.href = "/meeting/index.html";
+      });
+
+      initMeeting();
+    </script>
+  </body>
+</html>

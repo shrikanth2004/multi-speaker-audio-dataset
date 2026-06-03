@@ -6,9 +6,100 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>Meeting Room</title>
     <link rel="stylesheet" href="/css/styles.css" />
-    <link rel="stylesheet" href="/css/meeting.css?v=3" />
+    <link rel="stylesheet" href="/css/meeting.css?v=4" />
+    <style>
+      /* Critical mobile layout — works even if meeting.css is cached */
+      .meeting-page {
+        height: 100svh;
+        height: -webkit-fill-available;
+        min-height: 100svh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .meeting-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .meeting-main {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .meeting-controls {
+        flex: 0 0 auto;
+        flex-shrink: 0;
+        width: 100%;
+        background: #1a1d27;
+        border-top: 1px solid #2e3345;
+        box-sizing: border-box;
+      }
+      .controls-grid {
+        display: grid !important;
+        grid-template-columns: 52px 1fr;
+        grid-template-rows: auto auto;
+        gap: 8px;
+        padding: 10px 12px;
+        padding-bottom: max(12px, env(safe-area-inset-bottom, 16px));
+        box-sizing: border-box;
+      }
+      .control-mute {
+        grid-column: 1;
+        grid-row: 1;
+        width: 52px !important;
+        height: 52px !important;
+      }
+      .control-leave {
+        grid-column: 2;
+        grid-row: 1;
+        width: 100% !important;
+        height: 52px !important;
+        border-radius: 10px !important;
+      }
+      .control-start,
+      .control-end {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: 100% !important;
+        height: 48px !important;
+        border-radius: 10px !important;
+      }
+      .control-btn[hidden] {
+        display: none !important;
+      }
+      @media (min-width: 769px) {
+        .controls-grid {
+          display: flex !important;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        .control-start,
+        .control-end,
+        .control-leave {
+          width: auto !important;
+          height: 52px !important;
+        }
+      }
+    </style>
+    <script>
+      (function () {
+        var mq = window.matchMedia(
+          "(max-width: 768px), (hover: none) and (pointer: coarse)"
+        );
+        function apply() {
+          document.documentElement.classList.toggle("is-touch-meeting", mq.matches);
+        }
+        apply();
+        mq.addEventListener("change", apply);
+      })();
+    </script>
   </head>
   <body class="meeting-page">
     <header class="meeting-topbar">
@@ -22,20 +113,21 @@
       </div>
     </header>
 
-    <main class="meeting-main">
-      <section class="meeting-stage">
-        <div class="participant-count-large" id="count-display">0</div>
-        <p style="color: var(--text-muted); margin: 0">in this call</p>
-        <div class="participant-avatars" id="avatar-grid"></div>
-      </section>
+    <div class="meeting-body">
+      <main class="meeting-main">
+        <section class="meeting-stage">
+          <div class="participant-count-large" id="count-display">0</div>
+          <p class="stage-subtitle">in this call</p>
+          <div class="participant-avatars" id="avatar-grid"></div>
+        </section>
 
-      <aside class="sidebar-panel">
-        <div class="panel-header">Participants</div>
-        <div class="participant-list" id="participant-list"></div>
-      </aside>
-    </main>
+        <aside class="sidebar-panel">
+          <div class="panel-header">Participants</div>
+          <div class="participant-list" id="participant-list"></div>
+        </aside>
+      </main>
 
-    <footer class="meeting-controls" id="meeting-controls">
+      <footer class="meeting-controls" id="meeting-controls">
       <div class="controls-grid">
         <button
           type="button"
@@ -61,7 +153,8 @@
           End meeting
         </button>
       </div>
-    </footer>
+      </footer>
+    </div>
 
     <div class="modal-overlay" id="download-modal" hidden>
       <div class="modal card" style="text-align: center; max-width: 420px">
@@ -112,38 +205,6 @@
       const iconMicOn = document.getElementById("icon-mic-on");
       const iconMicOff = document.getElementById("icon-mic-off");
       const meetingControls = document.getElementById("meeting-controls");
-
-      function syncControlsLayout() {
-        if (!meetingControls) return;
-        const isMobile = window.matchMedia("(max-width: 768px)").matches;
-        const h = Math.ceil(meetingControls.offsetHeight);
-        document.documentElement.style.setProperty("--meeting-controls-height", `${h}px`);
-
-        if (!isMobile) {
-          meetingControls.style.bottom = "";
-          return;
-        }
-
-        if (window.visualViewport) {
-          const vv = window.visualViewport;
-          const gap = Math.max(0, window.innerHeight - (vv.offsetTop + vv.height));
-          meetingControls.style.bottom = `${Math.ceil(gap)}px`;
-        } else {
-          meetingControls.style.bottom = "0px";
-        }
-      }
-
-      if (window.ResizeObserver && meetingControls) {
-        new ResizeObserver(syncControlsLayout).observe(meetingControls);
-      }
-      window.addEventListener("resize", syncControlsLayout);
-      window.addEventListener("orientationchange", () => {
-        setTimeout(syncControlsLayout, 150);
-      });
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", syncControlsLayout);
-        window.visualViewport.addEventListener("scroll", syncControlsLayout);
-      }
 
       const listRows = new Map();
       const avatarTiles = new Map();
@@ -239,7 +300,6 @@
           if (isHost) {
             btnStart.hidden = false;
           }
-          requestAnimationFrame(syncControlsLayout);
 
           meeting = new WebRTCMeeting({
             roomId,
@@ -285,7 +345,6 @@
           startTimer();
           btnStart.hidden = true;
           btnEnd.hidden = false;
-          requestAnimationFrame(syncControlsLayout);
           showToast("Meeting started — recording all participants");
         } catch (e) {
           showToast(e.message);
@@ -338,7 +397,6 @@
       });
 
       initMeeting();
-      requestAnimationFrame(syncControlsLayout);
     </script>
   </body>
 </html>

@@ -109,6 +109,23 @@
       const iconMicOff = document.getElementById("icon-mic-off");
       const meetingControls = document.getElementById("meeting-controls");
 
+      function syncControlsInset() {
+        if (!meetingControls) return;
+        const h = Math.ceil(meetingControls.getBoundingClientRect().height);
+        document.documentElement.style.setProperty(
+          "--meeting-controls-height",
+          `${h}px`
+        );
+      }
+
+      if (window.ResizeObserver && meetingControls) {
+        new ResizeObserver(syncControlsInset).observe(meetingControls);
+      }
+      window.addEventListener("resize", syncControlsInset);
+      window.addEventListener("orientationchange", () => {
+        setTimeout(syncControlsInset, 100);
+      });
+
       const listRows = new Map();
       const avatarTiles = new Map();
 
@@ -203,6 +220,7 @@
           if (isHost) {
             btnStart.hidden = false;
           }
+          requestAnimationFrame(syncControlsInset);
 
           meeting = new WebRTCMeeting({
             roomId,
@@ -248,6 +266,7 @@
           startTimer();
           btnStart.hidden = true;
           btnEnd.hidden = false;
+          requestAnimationFrame(syncControlsInset);
           showToast("Meeting started — recording all participants");
         } catch (e) {
           showToast(e.message);
@@ -300,6 +319,7 @@
       });
 
       initMeeting();
+      requestAnimationFrame(syncControlsInset);
     </script>
   </body>
 </html>

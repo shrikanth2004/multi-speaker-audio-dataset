@@ -1,4 +1,5 @@
 .meeting-page {
+  --meeting-controls-height: 5.5rem;
   height: 100vh;
   height: 100dvh;
   display: flex;
@@ -6,6 +7,7 @@
   background: #12141c;
   overflow: hidden;
   max-width: 100vw;
+  position: relative;
 }
 
 .meeting-topbar {
@@ -197,9 +199,10 @@
 }
 
 .meeting-controls {
+  flex: 0 0 auto;
   flex-shrink: 0;
   position: relative;
-  z-index: 10;
+  z-index: 100;
   width: 100%;
   max-width: 100vw;
   padding: 0.75rem 0.75rem;
@@ -207,6 +210,11 @@
   background: var(--surface);
   border-top: 1px solid var(--border);
   box-sizing: border-box;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.control-btn[hidden] {
+  display: none !important;
 }
 
 .controls-bar {
@@ -357,18 +365,43 @@
   gap: 0.5rem;
 }
 
+/* Mobile / tablet: pin controls to bottom so they are never clipped */
 @media (max-width: 768px) {
+  .meeting-page {
+    --meeting-controls-height: 10.5rem;
+    overflow: hidden;
+  }
+
+  .meeting-controls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 500;
+    margin: 0;
+  }
+
   .meeting-main {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+    grid-template-rows: none;
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(
+      var(--meeting-controls-height) + env(safe-area-inset-bottom, 0px)
+    );
   }
 
   .meeting-stage {
-    padding: 1rem 0.75rem;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 1rem 0.75rem 0.5rem;
     justify-content: flex-start;
-    padding-top: 1.25rem;
+    overflow-y: auto;
   }
 
   .participant-count-large {
@@ -376,7 +409,7 @@
   }
 
   .participant-avatars {
-    margin-top: 1rem;
+    margin-top: 0.75rem;
     gap: 0.65rem;
   }
 
@@ -391,13 +424,19 @@
   }
 
   .sidebar-panel {
+    flex: 0 0 auto;
     border-left: none;
     border-top: 1px solid var(--border);
-    max-height: 140px;
-    flex-shrink: 0;
+    max-height: 28vh;
+    min-height: 0;
+  }
+
+  .participant-list {
+    max-height: 22vh;
   }
 
   .meeting-topbar {
+    flex: 0 0 auto;
     flex-wrap: wrap;
     gap: 0.35rem 0.75rem;
     padding: 0.5rem 0.75rem;
@@ -419,48 +458,50 @@
     font-size: 0.75rem;
   }
 
-  .meeting-meta #participant-count {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-}
-
-@media (max-width: 480px) {
   .controls-bar {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto auto;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
     gap: 0.5rem;
-    align-items: stretch;
+    width: 100%;
   }
 
   #btn-mute {
-    grid-row: 1 / 3;
-    align-self: center;
-    justify-self: center;
+    flex: 0 0 52px;
   }
 
   .controls-actions {
-    grid-column: 2;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-    width: 100%;
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
   }
 
   .control-btn.host-start,
   .control-btn.leave {
     width: 100%;
-    min-height: 48px;
-    padding: 0 0.65rem;
-    font-size: 0.8rem;
+    min-height: 46px;
+    height: auto;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+    border-radius: 10px;
     white-space: nowrap;
   }
 
-  #btn-start:not([hidden]),
-  #btn-end:not([hidden]),
-  #btn-leave {
-    grid-column: 1 / -1;
+  .control-btn.leave {
+    border-radius: 10px;
+  }
+
+  .meeting-meta #participant-count {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .meeting-page {
+    --meeting-controls-height: 11.5rem;
   }
 
   .btn-label-full {
@@ -470,30 +511,25 @@
   .btn-label-short {
     display: inline;
   }
-
-  #btn-leave .btn-label-full,
-  #btn-leave .btn-label-short {
-    display: none;
-  }
-
-  .control-btn.leave {
-    font-size: 0.85rem;
-  }
-
-  .meeting-meta #participant-count {
-    display: none;
-  }
 }
 
 @media (max-width: 360px) {
+  .meeting-page {
+    --meeting-controls-height: 12rem;
+  }
+
   .control-btn {
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
+  }
+
+  #btn-mute {
+    flex: 0 0 48px;
   }
 
   .control-btn.host-start,
   .control-btn.leave {
     min-height: 44px;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
   }
 }
